@@ -1,7 +1,7 @@
 # ESP32 Robot Dog
 
 <p align="center">
-  <img src="assets/renders/robot-dog-banner.png" alt="ESP32 Robot Dog" width="100%"/>
+  <img src="assets/img/small.jpg" alt="ESP32 Robot Dog" width="600"/>
 </p>
 
 <p align="center">
@@ -12,277 +12,242 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square"/>
 </p>
 
-A **12-DOF quadruped robot dog** powered entirely by a single ESP32. Controlled via a browser-based joystick interface over WiFi — no additional microcontrollers, Bluetooth modules, or PWM ICs required.
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Demo](#demo)
-- [Hardware](#hardware)
-  - [Electronics](#electronics)
-  - [3D Printed Parts](#3d-printed-parts)
-  - [Wiring](#wiring)
-- [Software](#software)
-  - [Dependencies](#dependencies)
-  - [Configuration](#configuration)
-  - [Upload](#upload)
-- [Assembly](#assembly)
-- [Calibration](#calibration)
-- [Web Interface](#web-interface)
-- [Folder Structure](#folder-structure)
-- [License](#license)
+A 12-DOF quadruped robot dog powered by a single ESP32. Controlled via a browser-based dual-joystick interface over WiFi — no additional PWM boards, Bluetooth modules, or microcontrollers required.
 
 ---
 
 ## Features
 
-- ✅ Single ESP32 — no extra PWM boards or Bluetooth modules
-- ✅ Browser-based dual-joystick control (phone / tablet / PC)
-- ✅ True Inverse Kinematics per leg
-- ✅ Configurable gait sequences
-- ✅ CLI interface via Serial for calibration and debug
-- ✅ Optional INA219 power monitoring
-- ✅ Lightweight 3D-printed PLA body
+- Single ESP32 — no extra hardware needed
+- Browser-based dual-joystick control (phone / tablet / PC)
+- True inverse kinematics per leg
+- Configurable gait sequences (trot, creep)
+- Serial CLI for calibration and debug
+- Optional INA219 power monitoring
+- Lightweight 3D-printed PLA body
 
 ---
 
-## Demo
+## Repository Structure
 
-| Render | Walking Gait |
-|--------|-------------|
-| ![render](assets/renders/side-view.png) | ![demo](assets/demo/walk-preview.gif) |
-
-> 📽️ Full Fusion 360 animated assembly walkthrough: [`assets/renders/assembly-animation.mp4`](assets/renders/assembly-animation.mp4)
+```
+.
+├── LICENSE
+├── README.md
+├── assets
+│   └── img
+│       └── small.jpg
+├── software
+│   ├── robot_dog_esp32
+│   │   ├── robot_dog_esp32.ino     # Main sketch
+│   │   ├── def.h                   # Core definitions
+│   │   ├── config.h                # Global config
+│   │   ├── config_small.h          # Small robot config
+│   │   ├── config_wifi.example.h   # WiFi credentials template
+│   │   ├── subscription.h          # Subscription types
+│   │   ├── cli.h                   # CLI declarations
+│   │   ├── HAL.ino                 # Hardware abstraction layer
+│   │   ├── HAL_ESP32PWM.ino        # ESP32 native PWM driver
+│   │   ├── HAL_PCA9685.ino         # PCA9685 I2C PWM driver
+│   │   ├── WiFi.ino                # WiFi AP setup
+│   │   ├── webServer.ino           # Async web server
+│   │   ├── packagesProcess.ino     # Control packet processing
+│   │   ├── cli.ino                 # CLI main handler
+│   │   ├── cliGet.ino              # CLI get commands
+│   │   ├── cliSet.ino              # CLI set / trim commands
+│   │   ├── gait.ino                # Gait loop
+│   │   ├── servo.ino               # Servo write helpers
+│   │   ├── settings.ino            # Runtime settings
+│   │   ├── subscription.ino        # Pub/sub event system
+│   │   ├── helpers.ino             # Utility functions
+│   │   ├── failsafe.ino            # Watchdog / failsafe
+│   │   ├── powerSensor.ino         # INA219 power monitoring
+│   │   ├── imu.ino                 # IMU read (WIP)
+│   │   ├── i2cscan.ino             # I2C bus scanner
+│   │   ├── testHAL.ino             # HAL self-test
+│   │   ├── libs
+│   │   │   ├── HAL_body            # Body pose HAL
+│   │   │   ├── IK                  # Inverse kinematics engine
+│   │   │   ├── balance             # Balance controller
+│   │   │   ├── gait                # Gait library
+│   │   │   ├── planner             # Motion planner
+│   │   │   └── transition          # State transition manager
+│   │   └── web
+│   │       └── index.html.gz.h     # Compressed web UI (PROGMEM)
+│   └── web
+│       ├── README.md               # Web UI build instructions
+│       ├── gulpfile.js             # Build pipeline
+│       ├── package.json
+│       └── src
+│           ├── index.html          # Web UI source
+│           └── s.js                # Joystick + telemetry JS
+└── tools
+    └── servoCalib
+        └── servoCalib.ino          # Standalone servo calibration sketch
+```
 
 ---
 
 ## Hardware
 
-### Electronics
+### Bill of Materials
 
 | Component | Qty | Notes |
 |-----------|-----|-------|
 | ESP32 (38-pin) | 1 | Main controller |
 | TowerPro MG90D / MG90S Servo | 12 | Cable exit at bottom |
-| Mini360 DC-DC Buck Converter | 3 | 2× for legs, 1× for ESP32 |
-| 18650 Battery Holder (2S) | 1 | SMT type preferred |
-| 18650 Battery | 2 | 3.7V, 2000mAh+ |
-| INA219 Current Sensor | 1 | Optional — power telemetry |
-| Prototyping Board (50×70mm) | 1 | For PCB assembly |
-| Bearings 8×12×2.5mm | 8 | Shoulder joints |
-| Electrolytic Capacitors | 4–6 | Noise decoupling |
+| Mini360 DC-DC Buck Converter | 3 | 2× servos (5V) · 1× ESP32 (3.3V) |
+| 18650 Battery Holder (2S SMT) | 1 | |
+| 18650 Battery | 2 | 3.7V · 2000mAh+ |
+| INA219 Current Sensor | 1 | Optional |
+| Prototyping Board 50×70mm | 1 | |
+| Bearing 8×12×2.5mm | 8 | Shoulder joints |
+| Cyanoacrylate (super glue) | 1 | Body sub-assembly bonding |
 
-> ⚠️ Servo sizing matters. MG90D/S have slightly different dimensions from generic clones. Verify before printing.
+### Servo GPIO Map
 
----
+| Leg | Alpha (Hip Yaw) | Beta (Shoulder) | Gamma (Knee) |
+|-----|-----------------|-----------------|--------------|
+| Left Front  | 25 | 26 | 27 |
+| Right Front | 16 | 18 | 17 |
+| Left Hind   | 13 | 12 | 14 |
+| Right Hind  |  4 |  2 | 15 |
 
-### 3D Printed Parts
+I²C: **SDA → GPIO 21 · SCL → GPIO 22**
 
-All STL files are in [`hardware/3d-models/`](hardware/3d-models/).
-
-| Part | Qty | Mirror? | Notes |
-|------|-----|---------|-------|
-| Body | 1 | — | |
-| Leg Top | 2 | ✅ (×2 mirrored) | |
-| Leg Bottom | 2 | ✅ (×2 mirrored) | |
-| Shoulder Part 1 | 4 | — | |
-| Shoulder Part 2 | 4 | — | |
-| Legs Holder Part 1 | 2 | — | |
-| Legs Holder Part 2 | 2 | — | |
-| Servo Gear | 4 | — | Print at highest quality |
-| Leg Cover | 1 | — | |
-| Cover Clamps | 2 | — | |
-| Leg Shoes | 4 | — | **Flexible filament (TPU)** |
-| Calibration Tool (Beta/Gamma) | 1 | ✅ (×1 mirrored) | |
-| Calibration Tool (Alpha) | 1 | — | |
-| Servo Calibration Disc (10°) | 1 | — | |
-
-**Print Settings (Ender 3 / Cura):**
+### Power
 
 ```
-Layer Height  : 0.12mm (Dynamic Quality)
-Infill        : 30–40%
-Support       : Yes (Touching Build Plate)
-Brim          : Yes (5mm)
-Ironing        : Yes (top surfaces)
-Material      : PLA
+2× 18650 in series (~8.4V)
+  ├── Mini360 #1 → 5.0V → Left servos  (×6)
+  ├── Mini360 #2 → 5.0V → Right servos (×6)
+  └── Mini360 #3 → 3.3V → ESP32
 ```
 
-> 🦶 Servo gears must be printed as precisely as possible. Enable Support for "floating" geometry.
+---
+
+## 3D Printed Parts
+
+Print files are not included in this repo. See the Thingiverse link in the project page.
+
+| Part | Qty | Mirror | Material |
+|------|-----|--------|----------|
+| Body | 1 | — | PLA |
+| Leg Top | 2 + 2 | ✅ | PLA |
+| Leg Bottom | 2 + 2 | ✅ | PLA |
+| Shoulder Part 1 | 4 | — | PLA |
+| Shoulder Part 2 | 4 | — | PLA |
+| Legs Holder Part 1 | 2 | — | PLA |
+| Legs Holder Part 2 | 2 | — | PLA |
+| Servo Gear | 4 | — | PLA |
+| Cover | 1 | — | PLA |
+| Cover Clamps | 2 | — | PLA |
+| Leg Shoes | 4 | — | **TPU** |
+| Calib Tool Beta/Gamma | 1 + 1 | ✅ | PLA |
+| Calib Tool Alpha | 1 | — | PLA |
+| Calib Servo Disc 10° | 1 | — | PLA |
+
+**Recommended print settings:** 0.12mm layer height · 30% infill · Support on · Brim on · Ironing on
 
 ---
 
-### Wiring
-
-Servo GPIO map (configurable in `firmware/src/config.h`):
-
-| Leg | Alpha (Body) | Beta (Shoulder) | Gamma (Knee) |
-|-----|-------------|-----------------|--------------|
-| Left Front  | GPIO 25 | GPIO 26 | GPIO 27 |
-| Right Front | GPIO 16 | GPIO 18 | GPIO 17 |
-| Left Hind   | GPIO 13 | GPIO 12 | GPIO 14 |
-| Right Hind  | GPIO 4  | GPIO 2  | GPIO 15  |
-
-I²C (IMU + INA219): **SDA → GPIO 21**, **SCL → GPIO 22**
-
-Full schematic: [`hardware/schematics/wiring.pdf`](hardware/schematics/wiring.pdf)
-
----
-
-## Software
+## Software Setup
 
 ### Dependencies
 
-Install via Arduino IDE → *Sketch → Include Library → Manage Libraries*:
+| Library | Version | How to install |
+|---------|---------|---------------|
+| ESP Async Web Server | latest | [GitHub](https://github.com/me-no-dev/ESPAsyncWebServer) — manual |
+| AsyncTCP | latest | [GitHub](https://github.com/me-no-dev/AsyncTCP) — manual |
+| ESP32 ISR Servo | **1.1.0** | Arduino Library Manager |
+| MPU9250_WE | **1.1.3** | Arduino Library Manager |
+| INA219_WE | latest | Arduino Library Manager |
 
-| Library | Version | Install Method |
-|---------|---------|----------------|
-| ESP Async Web Server | latest | Manual / GitHub |
-| AsyncTCP | latest | Manual / GitHub |
-| ESP32 ISR Servo | **1.1.0** | Library Manager |
-| MPU9250_WE | **1.1.3** | Library Manager |
-| INA219_WE | latest | Library Manager |
+> ⚠️ Use ESP32 Arduino core **v1.x only**. v2.x causes a WiFi-related core freeze.
 
-> ⚠️ Use ESP32 board package **v1.x** only. v2.x introduced WiFi task changes that cause core freezes.
+### WiFi Configuration
 
-Add this to Arduino `boards.txt` URL:
+```bash
+cp software/robot_dog_esp32/config_wifi.example.h \
+   software/robot_dog_esp32/config_wifi.h
 ```
-https://dl.espressif.com/dl/package_esp32_index.json
-```
 
----
-
-### Configuration
-
-1. Rename `firmware/src/config_wifi.example.h` → `config_wifi.h`
-2. Set your credentials:
+Edit `config_wifi.h`:
 
 ```cpp
-const char* APssid = "RobotDog";       // WiFi AP name
-const char* APpass = "yourpassword";   // Min 8 characters
+const char* APssid = "RobotDog";      // AP name
+const char* APpass = "yourpassword";  // Min 8 chars
 ```
 
-3. Tune servo limits in `firmware/src/config.h` if needed.
+### Flash
 
----
-
-### Upload
-
-1. Open `firmware/src/main.ino` in Arduino IDE
-2. Select Board: **ESP32 Dev Module**
-3. Select Port: your ESP32's COM port
+1. Open `software/robot_dog_esp32/robot_dog_esp32.ino` in Arduino IDE
+2. Board: **ESP32 Dev Module**
+3. Upload speed: **921600**
 4. Click **Upload**
 
+### Web UI (optional rebuild)
+
+```bash
+cd software/web
+npm install
+npm run build        # outputs index.html.gz.h into robot_dog_esp32/web/
+```
+
 ---
 
-## Assembly
+## Usage
 
-See the step-by-step guide: [`docs/assembly.md`](docs/assembly.md)
+1. Power on the robot
+2. Connect to WiFi AP: **RobotDog**
+3. Open `http://192.168.4.1` in any browser
+4. Use the dual joystick to control movement
+5. Telemetry (battery voltage / current) shown live if INA219 is fitted
 
-High-level order:
+---
 
+## Serial CLI
+
+Open Arduino Serial Monitor at **115200 baud**.
+
+```bash
+set help                     # list all commands
+set servo_to_calib           # center all servos (calibration position)
+set LF_HAL_trim_alpha -3     # trim left-front alpha joint by -3°
+set RF_HAL_trim_beta 2
+get telemetry                # print live telemetry
 ```
-1. Print all parts → clean elephant foot from gears
-2. Glue body sub-assemblies (flat file surfaces before gluing)
-3. Cut servo horns → glue into servo gears
-4. Thread servo cables through leg and body channels
-5. Set all servos to center (1500µs) before gearing
-6. Install shoulder bearings and squeeze-fit assemblies
-7. Solder PCB → flash firmware → calibrate
-```
+
+**Leg prefixes:** `LF` · `RF` · `LH` · `RH`  
+**Joint names:** `alpha` · `beta` · `gamma`
 
 ---
 
 ## Calibration
 
-Full guide: [`docs/calibration.md`](docs/calibration.md)
+### 1 — Servo Limits
 
-**Quick steps via Serial CLI:**
-
-```bash
-# Set all servos to calibration position
-set servo_to_calib
-
-# List all available trim commands
-set help
-
-# Trim individual joint (example: left-front alpha)
-set LF_HAL_trim_alpha -3
-
-# Trim left-front beta
-set LF_HAL_trim_beta 2
-```
-
-Leg prefixes: `LF` `RF` `LH` `RH` (Left/Right Front/Hind)  
-Angles: `alpha` (body rotate) · `beta` (shoulder) · `gamma` (knee)
-
----
-
-## Web Interface
-
-After flashing:
-
-1. Connect to WiFi AP: **RobotDog** (or your configured name)
-2. Open browser → `http://192.168.4.1`
-3. Use dual joystick to control movement
-4. View live telemetry (battery voltage via INA219)
-
-Works on any modern browser — mobile optimized.
-
----
-
-## Folder Structure
+Flash `tools/servoCalib/servoCalib.ino` to find `minUs` / `maxUs` for your servo batch.  
+Connect one servo to GPIO 14. Send µs values over Serial.
 
 ```
-esp32-robot-dog/
-├── firmware/
-│   ├── src/
-│   │   ├── main.ino               # Entry point
-│   │   ├── config.h               # GPIO map, servo limits, tuning
-│   │   ├── config_wifi.example.h  # WiFi credentials template
-│   │   ├── kinematics.h           # Inverse kinematics engine
-│   │   ├── gait.h                 # Gait sequencer
-│   │   ├── servo_hal.h            # Servo hardware abstraction
-│   │   └── webserver.h            # Async web server + UI
-│   ├── lib/
-│   │   └── dependencies.md        # Library version pinning
-│   └── tools/
-│       └── servo_calibration/
-│           └── servo_calib.ino    # Standalone servo calibration sketch
-│
-├── hardware/
-│   ├── 3d-models/
-│   │   ├── body/
-│   │   ├── legs/
-│   │   ├── shoulder/
-│   │   ├── assembly/
-│   │   └── calibration-tools/
-│   ├── schematics/
-│   │   ├── wiring.pdf
-│   │   └── wiring.png
-│   └── pcb/
-│       └── gerbers/               # (optional PCB export)
-│
-├── docs/
-│   ├── assembly.md
-│   ├── calibration.md
-│   ├── electronics.md
-│   └── images/
-│
-├── assets/
-│   ├── renders/                   # Fusion 360 renders + animation
-│   ├── demo/                      # GIFs, videos
-│   └── screenshots/               # Web UI screenshots
-│
-├── .gitignore
-├── LICENSE
-└── README.md
+1500  →  centre
+800   →  decrease until stall, step back one value = minUs
+2200  →  increase until stall, step back one value = maxUs
 ```
+
+### 2 — Leg Assembly
+
+Send `set servo_to_calib` via Serial CLI before assembling legs.  
+Use the printed calibration tools to align each joint at 90° / 45° / 90°.
+
+### 3 — Fine Trim
+
+Use `set XX_HAL_trim_YYY <value>` to dial in small offsets.  
+Persist final values by editing `config_small.h`.
 
 ---
 
 ## License
 
-MIT License — see [`LICENSE`](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
