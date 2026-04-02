@@ -1,0 +1,29 @@
+# WiFi credentials — never commit
+firmware/src/config_wifi.h
+
+# Arduino build artifacts
+build/
+*.elf
+*.bin
+*.map
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Linux
+*~
+
+# VSCode
+.vscode/
+
+# Fusion 360 autosave / lock files
+*.lck
+*.lock
+
+# Large binary assets (add to Git LFS if needed)
+# *.mp4
+# *.f3d
